@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Incident Response Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a1a; color: #00ff88; font-family: 'Courier New', monospace; }
+        .header { background: #0d1117; padding: 20px; text-align: center; border-bottom: 2px solid #00ff88; }
+        .header h1 { font-size: 28px; color: #00ff88; }
+        .header p { color: #888; font-size: 13px; margin-top: 5px; }
+        .stats { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
+        .stat-card { background: #0d1117; border: 1px solid #00ff88; border-radius: 8px; padding: 20px; text-align: center; min-width: 150px; }
+        .stat-card h2 { font-size: 36px; color: #00ff88; }
+        .stat-card p { color: #888; font-size: 12px; margin-top: 5px; }
+        .stat-card.red { border-color: #ff4444; }
+        .stat-card.red h2 { color: #ff4444; }
+        .stat-card.yellow { border-color: #ffaa00; }
+        .stat-card.yellow h2 { color: #ffaa00; }
+        .controls { text-align: center; padding: 10px; }
+        .btn { background: #00ff88; color: #0a0a1a; border: none; padding: 12px 30px;
+               font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #00cc66; }
+        .btn.red { background: #ff4444; color: white; }
+        .table-container { padding: 20px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0d1117; color: #00ff88; padding: 12px; text-align: left; border-bottom: 2px solid #00ff88; }
+        td { padding: 10px 12px; border-bottom: 1px solid #1a1a2e; font-size: 13px; }
+        tr:hover { background: #0d1117; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .High { background: #ff444433; color: #ff4444; border: 1px solid #ff4444; }
+        .Medium { background: #ffaa0033; color: #ffaa00; border: 1px solid #ffaa00; }
+        .Low { background: #00ff8833; color: #00ff88; border: 1px solid #00ff88; }
+        .status-contained { color: #00ff88; }
+        .status-monitoring { color: #ffaa00; }
+        .alert-banner { display: none; background: #ff4444; color: white; text-align: center;
+                        padding: 10px; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .footer { text-align: center; padding: 20px; color: #444; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="alert-banner" id="alertBanner">🚨 HIGH SEVERITY THREAT DETECTED — PLAYBOOK EXECUTING 🚨</div>
+    <div class="header">
+        <h1>🛡️ Incident Response Automation Dashboard</h1>
+        <p>AI-Powered SOAR Platform | Real-Time Threat Monitoring</p>
+        <p id="clock" style="color:#00ff88; margin-top:8px;"></p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h2 id="total">0</h2>
+            <p>Total Incidents</p>
+        </div>
+        <div class="stat-card red">
+            <h2 id="high">0</h2>
+            <p>High Severity</p>
+        </div>
+        <div class="stat-card yellow">
+            <h2 id="contained">0</h2>
+            <p>Auto Contained</p>
+        </div>
+        <div class="stat-card">
+            <h2 id="mttd">-</h2>
+            <p>MTTD</p>
+        </div>
+        <div class="stat-card">
+            <h2 id="mttr">-</h2>
+            <p>MTTR</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="simulate()">⚡ Simulate Attack</button>
+        <button class="btn red" onclick="simulateHigh()">🚨 Simulate High Threat</button>
+        <button class="btn" onclick="autoMode()" id="autoBtn">▶ Start Auto <button class="btn" onclick="window.open('/api/report')">📄 Download Incident Report</button>
+        Mode</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Incident ID</th>
+                    <th>Threat Type</th>
+                    <th>Severity</th>
+                    <th>Source IP</th>
+                    <th>Time Detected</th>
+                    <th>Status</th>
+                    <th>Action Taken</th>
+                    <th>AI Danger Score</th>
+                    
+                </tr>
+            </thead>
+            <tbody id="incidentTable"></tbody>
+        </table>
+    </div>
+<div style="padding: 20px;">
+    <h2 style="color:#00ff88; margin-bottom:15px;">📋 Playbook Execution Log</h2>
+    <div id="playbookLog" style="background:#0d1117; border:1px solid #00ff88; border-radius:8px; padding:15px; font-size:12px; max-height:300px; overflow-y:auto;"></div>
+</div>
+    <div class="footer">
+        <p>Incident Response Automation | SOAR Platform | NIST & ISO 27035 Compliant</p>
+    </div>
+
+<script>
+    let autoInterval = null;
+    let autoRunning = false;
+
+    function updateClock() {
+        document.getElementById('clock').textContent = 'System Time: ' + new Date().toLocaleString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function simulate() {
+        fetch('/api/simulate')
+            .then(r => r.json())
+            .then(data => {
+                if (data.severity === 'High') {
+                    document.getElementById('alertBanner').style.display = 'block';
+                    setTimeout(() => document.getElementById('alertBanner').style.display = 'none', 4000);
+                }
+                loadIncidents();
+                loadStats();
+            });
+    }
+
+    function simulateHigh() {
+        fetch('/api/simulate_high')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('alertBanner').style.display = 'block';
+                setTimeout(() => document.getElementById('alertBanner').style.display = 'none', 5000);
+                loadIncidents();
+                loadStats();
+            });
+    }
+
+    function autoMode() {
+        if (!autoRunning) {
+            autoInterval = setInterval(simulate, 3000);
+            autoRunning = true;
+            document.getElementById('autoBtn').textContent = '⏹ Stop Auto Mode';
+        } else {
+            clearInterval(autoInterval);
+            autoRunning = false;
+            document.getElementById('autoBtn').textContent = '▶ Start Auto Mode';
+        }
+    }
+
+    function loadIncidents() {
+        fetch('/api/incidents')
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.getElementById('incidentTable');
+                tbody.innerHTML = '';
+                data.reverse().forEach(inc => {
+                    const row = `<tr>
+                        <td style="color:#888">#${inc.id}</td>
+                        <td>${inc.type}</td>
+                        <td><span class="badge ${inc.severity}">${inc.severity}</span></td>
+                        <td style="color:#888">${inc.ip}</td>
+                        <td style="color:#888">${inc.time}</td>
+                        <td class="status-${inc.status.toLowerCase()}">${inc.status}</td>
+                        <td><td>${inc.action}</td>
+                    <td>
+                        <div style="background:#1a1a2e; border-radius:10px; overflow:hidden; width:120px;">
+                            <div style="background:${inc.ai_score > 80 ? '#ff4444' : inc.ai_score > 50 ? '#ffaa00' : '#00ff88'}; 
+                                width:${inc.ai_score || 0}%; padding:3px 6px; font-size:11px; font-weight:bold;">
+                                ${inc.ai_score || 0}%
+                            </div>
+                        </div>
+                    </td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+            });
+    }
+
+    function loadStats() {
+        fetch('/api/stats')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('total').textContent = data.total;
+                document.getElementById('high').textContent = data.high_severity;
+                document.getElementById('contained').textContent = data.contained;
+                document.getElementById('mttd').textContent = data.mttd;
+                document.getElementById('mttr').textContent = data.mttr;
+            });
+    }
+
+function loadPlaybook() {
+    fetch('/api/playbook_logs')
+        .then(r => r.json())
+        .then(data => {
+            const div = document.getElementById('playbookLog');
+            div.innerHTML = '';
+            data.reverse().forEach(log => {
+                div.innerHTML += `<p style="color:#ffaa00; margin:10px 0;">🔔 Incident #${log.incident_id} — ${log.time}</p>`;
+                log.steps.forEach(step => {
+                    div.innerHTML += `<p style="color:#00ff88; margin:2px 0; padding-left:10px;">▶ ${step}</p>`;
+                });
+                div.innerHTML += '<hr style="border-color:#1a1a2e; margin:10px 0;">';
+            });
+        });
+}
+
+setInterval(() => { loadIncidents(); loadStats(); loadPlaybook(); }, 5000);
+loadIncidents();
+loadStats();
+loadPlaybook();
+</script>
+</body>
+</html>
