@@ -33,7 +33,10 @@
         .status-contained { color: #00ff88; }
         .status-monitoring { color: #ffaa00; }
         .alert-banner { display: none; background: #ff4444; color: white; text-align: center; padding: 10px; font-weight: bold; animation: blink 1s infinite; position:relative; z-index:2; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .alert-banner { display: none; text-align: center; padding: 10px; font-weight: bold; position:relative; z-index:2; }
+        .alert-banner.high { background: #1a0000; color: #ff4444; border-bottom: 2px solid #ff2222; }
+        .alert-banner.medium { background: #1a1200; color: #ffcc00; border-bottom: 2px solid #ffcc00; }
+        .alert-banner.low { background: #001a04; color: #00ff66; border-bottom: 2px solid #00cc44; }
         .section { padding: 20px; position:relative; z-index:1; }
         .section h2 { color:#00ff88; margin-bottom:15px; }
         .box { background:#0d1117; border:1px solid #00ff88; border-radius:8px; padding:20px; }
@@ -50,7 +53,7 @@
 <body>
 
 <canvas id="matrixCanvas"></canvas>
-<div class="alert-banner" id="alertBanner">🚨 HIGH SEVERITY THREAT DETECTED — PLAYBOOK EXECUTING 🚨</div>
+<div class="alert-banner" id="alertBanner"></div>
 
 <div class="header">
     <h1>🛡️ Incident Response Automation Dashboard</h1>
@@ -169,10 +172,17 @@ function simulateHigh() {
     });
 }
 
-function showAlert() {
-    document.getElementById('alertBanner').style.display = 'block';
-    setTimeout(() => document.getElementById('alertBanner').style.display = 'none', 4000);
-}
+function showAlert(level = 'high') {
+    const banner = document.getElementById('alertBanner');
+    const message ={
+        high:'HIGH SEVERITY THREAT DETECTED - PLAYBOOK EXECUTING',
+        medium: 'MEDIUM SEVERITY ALERT - MONITORING ACTIVE'
+        low: 'LOW LEVEL ACTIVITY DETECTED - UNDER OBSERVATION'
+};
+banner.className='alert-banner'+level;
+banner.textContent = messages[level];
+    banner.style.display='block';
+    }
 
 function autoMode() {
     if (!autoRunning) {
