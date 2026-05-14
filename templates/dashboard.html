@@ -156,7 +156,17 @@ updateClock();
 
 function simulate() {
     fetch('/api/simulate').then(r => r.json()).then(data => {
-        if (data.severity === 'High') showAlert();
+
+        if (data.severity === 'High') {
+            showAlert('high');
+        }
+        else if (data.severity === 'Medium') {
+            showAlert('medium');
+        }
+        else {
+            showAlert('low');
+        }
+
         loadIncidents();
         loadStats();
     });
@@ -164,7 +174,9 @@ function simulate() {
 
 function simulateHigh() {
     fetch('/api/simulate_high').then(r => r.json()).then(data => {
-        showAlert();
+
+        showAlert('high');
+
         loadIncidents();
         loadStats();
     });
