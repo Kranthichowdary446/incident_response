@@ -1,4 +1,4 @@
-`<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Incident Response Dashboard</title>
@@ -32,10 +32,12 @@
         .Low { background: #00ff8833; color: #00ff88; border: 1px solid #00ff88; }
         .status-contained { color: #00ff88; }
         .status-monitoring { color: #ffaa00; }
-        .alert-banner { display: none; text-align: center; padding: 10px; font-weight: bold; position:relative; z-index:2; }
-        .alert-banner.high { background: #1a0000; color: #ff4444; border-bottom: 2px solid #ff2222; }
-        .alert-banner.medium { background: #1a1200; color: #ffcc00; border-bottom: 2px solid #ffaa00; }
-        .alert-banner.low { background: #001a04; color: #00ff66; border-bottom: 2px solid #00cc44; }        .section { padding: 20px; position:relative; z-index:1; }
+        .alert-banner { display: none; color: white; text-align: center; padding: 10px; font-weight: bold; animation: blink 0.8s infinite; position:relative; z-index:2; font-size:15px; }
+        .alert-high { background: #ff4444; color: white; }
+        .alert-medium { background: #ffaa00; color: #0a0a1a; }
+        .alert-low { background: #00ff88; color: #0a0a1a; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .section { padding: 20px; position:relative; z-index:1; }
         .section h2 { color:#00ff88; margin-bottom:15px; }
         .box { background:#0d1117; border:1px solid #00ff88; border-radius:8px; padding:20px; }
         .footer { text-align: center; padding: 20px; color: #444; font-size: 12px; position:relative; z-index:1; }
@@ -143,9 +145,9 @@ function setRole(role) {
         ciso: "🏢 CISO View — Executive overview of threat landscape and security posture",
         compliance: "📋 Compliance Officer View — Audit logs and ISO 27035 / NIST compliance reports"
     };
-    const colors = { soc: '#00ff88', ciso: '#ffaa00', compliance: '#ff4444' };
+    const roleColors = { soc: '#00ff88', ciso: '#ffaa00', compliance: '#ff4444' };
     document.getElementById('roleMessage').textContent = messages[role];
-    document.getElementById('roleMessage').style.color = colors[role];
+    document.getElementById('roleMessage').style.color = roleColors[role];
 }
 
 function updateClock() {
@@ -154,19 +156,28 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
+function showAlert(severity, type) {
+    const banner = document.getElementById('alertBanner');
+    banner.classList.remove('alert-high', 'alert-medium', 'alert-low');
+    if (severity === 'High') {
+        banner.classList.add('alert-high');
+        banner.textContent = '🚨 HIGH SEVERITY THREAT DETECTED — ' + type + ' — PLAYBOOK EXECUTING 🚨';
+    } else if (severity === 'Medium') {
+        banner.classList.add('alert-medium');
+        banner.textContent = '⚠️ MEDIUM SEVERITY THREAT DETECTED — ' + type + ' — FLAGGED FOR REVIEW ⚠️';
+    } else {
+        banner.classList.add('alert-low');
+        banner.textContent = '🟢 LOW SEVERITY THREAT DETECTED — ' + type + ' — MONITORING ACTIVATED 🟢';
+    }
+    banner.style.display = 'block';
+    setTimeout(() => {
+        banner.style.display = 'none';
+    }, 4000);
+}
+
 function simulate() {
     fetch('/api/simulate').then(r => r.json()).then(data => {
-
-        if (data.severity === 'High') {
-            showAlert('high');
-        }
-        else if (data.severity === 'Medium') {
-            showAlert('medium');
-        }
-        else {
-            showAlert('low');
-        }
-
+        showAlert(data.severity, data.type);
         loadIncidents();
         loadStats();
     });
@@ -174,25 +185,12 @@ function simulate() {
 
 function simulateHigh() {
     fetch('/api/simulate_high').then(r => r.json()).then(data => {
-
-        showAlert('high');
-
+        showAlert(data.severity, data.type);
         loadIncidents();
         loadStats();
     });
 }
 
-function showAlert(level = 'high') {
-    const banner = document.getElementById('alertBanner');
-    const messages = {
-        high: '⚠ HIGH SEVERITY THREAT DETECTED — PLAYBOOK EXECUTING',
-        medium: '◈ MEDIUM SEVERITY ALERT — MONITORING ACTIVE',
-        low: '● LOW LEVEL ACTIVITY DETECTED — UNDER OBSERVATION'
-    };
-    banner.className = 'alert-banner ' + level;
-    banner.textContent = messages[level];
-    banner.style.display = 'block';
-}
 function autoMode() {
     if (!autoRunning) {
         autoInterval = setInterval(simulate, 3000);
